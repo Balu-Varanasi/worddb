@@ -1,4 +1,9 @@
+# -*- coding: utf-8 -*-
+"""`words` models."""
+from django.contrib.postgres import fields as postgres_fields
 from django.db import models
+
+from . import constants
 
 
 class Language(models.Model):
@@ -6,40 +11,47 @@ class Language(models.Model):
 
 
 class WordRelation(models.Model):
-    name = models.CharField()  # plural, present-contineous, past, future, typo
+    # plural, present-contineous, past, future, typo
+    name = models.CharField(max_length=64)
 
 
 class Accent(models.Model):
-    name = models.CharField()  # American, British, Wales
+    name = models.CharField(max_length=64)  # American, British, Wales
 
 
 class System(models.Model):
-    name = models.CharField()  # IPA vs ARPA vs "Native"
-    code = models.CharField()  # ipa vs native_hi
+    name = models.CharField(max_length=64)  # IPA vs ARPA vs "Native"
+    code = models.CharField(max_length=64)  # ipa vs native_hi
     language = models.ForeignKey(Language, null=True)
 
 
 class Word(models.Model):
     language = models.ForeignKey(Language)
-    text = models.CharField(
-        max_length=200)  # /en/Love_(Feeling) vs /en/Love_(Score): wikipedia style
-    pronunciation = pg.JSONField()
-    {
-        "ipa": {
-            "American": "asdasdasd",
-        }
-    }
-    # ipa = pg.JSONField(max_length=200) # American: /ˈkwɛst͡ʃən/ British: /ˈkwɛʃt͡ʃən/
+
+    # /en/Love_(Feeling) vs /en/Love_(Score): wikipedia style
+    text = models.CharField(max_length=200)
+
+    # {
+    #     "ipa": {
+    #         "American": "asdasdasd",
+    #     }
+    # }
+    pronunciation = postgres_fields.JSONField()
+    # American: /ˈkwɛst͡ʃən/ British: /ˈkwɛʃt͡ʃən/
+    # ipa = pg.JSONField(max_length=200)
     # arpa = pg.JSONField(max_length=200)
     # brahmic = pg.JSONField(max_length=200)
     # telugu = pg.JSONField(max_length=200)
-    root = models.ForeignKey("Word", null=True,
-                             blank=True)  # Loves etc are roots
+
+    # Loves etc are roots
+    root = models.ForeignKey("Word", null=True, blank=True)
     root_relation = models.ForeignKey(WordRelation)
     disambiguation = models.CharField(max_length=200, blank=True)
-    pos = models.BitField(bits=VERB | NOUN | ADJECTIVE)
-    # unique_together: (language, text, disambiguation)
+    # TODO: Do we need this? Can we use WordRelation model?
+    pos = models.CharField(max_length=64, choices=constants.PARTS_OF_SPEECH)
 
+    class Meta:
+        unique_together = ('language', 'text', 'disambiguation')
 
 # like, love
 #
@@ -52,11 +64,11 @@ class Word(models.Model):
 class WordInfo(models.Model):
     word = models.ForeignKey(Word)
     language = models.ForeignKey(Language)
-    meanings = models.ManyToManyField(
-        Word)  ## all meanings of english word love in hindi
-    antonyms = models.ManyToManyField(
-        Word)  ## all anotnyms of english word love in hindi
-    synonyms = models.ManyToManyField(Word)
+    # all meanings of english word love in hindi
+    meanings = models.ManyToManyField(Word, related_name='meanings')
+    # all anotnyms of english word love in hindi
+    antonyms = models.ManyToManyField(Word, related_name='antonyms')
+    synonyms = models.ManyToManyField(Word, related_name='synonyms')
     text = models.TextField(blank=True)
 
 
